@@ -1233,12 +1233,11 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 6900258589097379958, guid: d3cf2c51a30e06dda8626302ef8b1841, type: 3}
   m_PrefabInstance: {fileID: 1022986837}
   m_PrefabAsset: {fileID: 0}
-<<<<<<<< HEAD:Assets/Scenes/Milestone_1.unity
 --- !u!4 &1117733412 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 1805513525073641891, guid: b2149f0b6954162ab80e0dbad837eb15, type: 3}
   m_PrefabInstance: {fileID: 213248334}
-========
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &1067611438
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1300,7 +1299,6 @@ PrefabInstance:
 Transform:
   m_CorrespondingSourceObject: {fileID: 1018243578393385574, guid: 84658b49ba259d140830ebb77fb47a7e, type: 3}
   m_PrefabInstance: {fileID: 1067611438}
->>>>>>>> origin/Prefabs-addition---Thoa:Assets/Milestone1.unity
   m_PrefabAsset: {fileID: 0}
 --- !u!1 &1254022385
 GameObject:
