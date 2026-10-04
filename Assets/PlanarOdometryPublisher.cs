@@ -85,7 +85,7 @@ public class PlanarOdometryPublisher : MonoBehaviour
         var odom = new OdometryMsg();
         odom.header.frame_id = "odom";
         odom.header.stamp = stamp;
-        odom.child_frame_id = "drive_center";
+        odom.child_frame_id = "base_footprint";
         odom.pose.pose.position = new PointMsg(relative.z, -relative.x, 0);
         odom.pose.pose.orientation = rotation;
         odom.twist.twist.linear = new Vector3Msg(bodyVelocity.z, -bodyVelocity.x, 0);
@@ -95,7 +95,7 @@ public class PlanarOdometryPublisher : MonoBehaviour
         var transformMessage = new TransformStampedMsg();
         transformMessage.header.frame_id = "odom";
         transformMessage.header.stamp = stamp;
-        transformMessage.child_frame_id = "drive_center";
+        transformMessage.child_frame_id = "base_footprint";
         transformMessage.transform.translation = new Vector3Msg(relative.z, -relative.x, 0);
         transformMessage.transform.rotation = rotation;
 
