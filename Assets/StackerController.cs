@@ -26,6 +26,11 @@ public class StackerController : MonoBehaviour
     public float liftDamping = 1000f;
     public float liftForceLimit = 2000f;
 
+    [Header("Articulation Solver")]
+    [Tooltip("Resolve wheel/ground contacts accurately enough for low-speed motion. Validated with a 0.01 s Fixed Timestep.")]
+    [Min(1)] public int solverIterations = 32;
+    [Min(1)] public int solverVelocityIterations = 8;
+
     [Header("ROS Topics")]
     public string cmdVelTopic = "/cmd_vel";
     public string liftCmdTopic = "/lift_cmd";
@@ -99,6 +104,14 @@ public class StackerController : MonoBehaviour
 
     public void ConfigureJoints()
     {
+        // The default 6/1 solver stalls small wheel commands under ground contact
+        // in WarehouseTraining. Apply the measured profile to this robot only.
+        foreach (var body in GetComponentsInChildren<ArticulationBody>())
+        {
+            body.solverIterations = Mathf.Max(1, solverIterations);
+            body.solverVelocityIterations = Mathf.Max(1, solverVelocityIterations);
+        }
+
         // Ensure the root ArticulationBody is mobile (not anchored to world)
         var rootAB = GetComponentInChildren<ArticulationBody>();
         if (rootAB != null && rootAB.isRoot)
