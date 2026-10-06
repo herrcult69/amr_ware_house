@@ -1,6 +1,7 @@
 using UnityEngine;
 
-// Attach to moving base_link. Draws the same padded rectangle as the ROS lesson.
+// Attach to the moving pose reference: legacy base_link or XStack drive_centre.
+// Draws the same padded rectangle as the selected ROS robot profile.
 // Local Unity +Z = ROS +X; local Unity -X = ROS +Y. Unit scale required.
 public class FootprintPreview : MonoBehaviour
 {
