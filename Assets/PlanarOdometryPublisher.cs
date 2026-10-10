@@ -10,14 +10,16 @@ using RosMessageTypes.Rosgraph;
 /// <summary>
 /// Lesson 1: ideal planar odometry from Unity ground-truth pose, not wheel encoders.
 /// Publishes /clock; ROS /use_sim_time must be true. Assumes Unity +Z is robot forward.
-/// Attach once and assign the moving base_link Transform in this project's prefab.
-/// Its planar projection represents the ROS base_footprint; the Unity object named
-/// base_footprint is a stationary wrapper without an ArticulationBody.
+/// Attach once per scene. Legacy: track moving base_link, publish base_footprint.
+/// XStack: track moving drive_centre, publish drive_center (ground-projected axle).
+/// Unity hierarchy names do not define ROS TF. Never track the stationary wrapper.
 /// </summary>
 public class PlanarOdometryPublisher : MonoBehaviour
 {
-    [Tooltip("Assign the moving base_link, not the stationary base_footprint wrapper. Its planar pose represents ROS base_footprint.")]
+    [Tooltip("Moving pose reference: legacy base_link or XStack drive_centre. Height is projected to zero.")]
     public Transform robotBase;
+    public string childFrameId = "base_footprint";
+    private static PlanarOdometryPublisher clockOwner;
     [Min(1f)] public float publishHz = 20f;
 
     private ROSConnection ros;
@@ -28,22 +30,40 @@ public class PlanarOdometryPublisher : MonoBehaviour
     private double previousTime;
     private bool initialized;
 
+    void OnDestroy()
+    {
+        if (clockOwner == this) clockOwner = null;
+    }
+
     void Start()
     {
+        if (string.IsNullOrWhiteSpace(childFrameId) || childFrameId.StartsWith("/") || childFrameId == "odom")
+        {
+            Debug.LogError("[Odometry] Set a nonempty child frame without a leading slash, distinct from odom.", this);
+            enabled = false;
+            return;
+        }
+        if (clockOwner != null && clockOwner != this)
+        {
+            Debug.LogError("[Odometry] Only one /odom, /tf and /clock publisher may run per scene.", this);
+            enabled = false;
+            return;
+        }
         if (robotBase == null)
         {
-            Debug.LogError("[Odometry] Assign the moving base_link to Robot Base.", this);
+            Debug.LogError("[Odometry] Assign the moving base_link or drive_centre to Robot Base.", this);
             enabled = false;
             return;
         }
 
         if (robotBase.name == "base_footprint" && robotBase.GetComponent<ArticulationBody>() == null)
         {
-            Debug.LogError("[Odometry] This base_footprint is a stationary wrapper. Assign its moving base_link child to Robot Base instead.", this);
+            Debug.LogError("[Odometry] This base_footprint is a stationary wrapper. Assign the moving pose reference instead.", this);
             enabled = false;
             return;
         }
 
+        clockOwner = this;
         ros = ROSConnection.GetOrCreateInstance();
         ros.RegisterPublisher<OdometryMsg>("/odom");
         ros.RegisterPublisher<TFMessageMsg>("/tf");
@@ -85,7 +105,7 @@ public class PlanarOdometryPublisher : MonoBehaviour
         var odom = new OdometryMsg();
         odom.header.frame_id = "odom";
         odom.header.stamp = stamp;
-        odom.child_frame_id = "base_footprint";
+        odom.child_frame_id = childFrameId;
         odom.pose.pose.position = new PointMsg(relative.z, -relative.x, 0);
         odom.pose.pose.orientation = rotation;
         odom.twist.twist.linear = new Vector3Msg(bodyVelocity.z, -bodyVelocity.x, 0);
@@ -95,7 +115,7 @@ public class PlanarOdometryPublisher : MonoBehaviour
         var transformMessage = new TransformStampedMsg();
         transformMessage.header.frame_id = "odom";
         transformMessage.header.stamp = stamp;
-        transformMessage.child_frame_id = "base_footprint";
+        transformMessage.child_frame_id = childFrameId;
         transformMessage.transform.translation = new Vector3Msg(relative.z, -relative.x, 0);
         transformMessage.transform.rotation = rotation;
 

@@ -16,8 +16,17 @@ public class StackerController : MonoBehaviour
 
     [Header("Robot Physical Dimensions")]
     public float wheelRadius = 0.075f; // meters
-    public float trackWidth = 0.44f;   // meters (distance between wheels)
-    public float maxLiftHeight = 0.40f; // meters
+    public float trackWidth = 0.40f;   // meters (distance between wheels for XStackDesign)
+    public float minLiftHeight = 0f; // meters (allows lowering for ground picks)
+    public float maxLiftHeight = 0.75f; // meters (extended single-stage reach)
+
+    [Header("Straight-Line Heading Lock (Anti-Drift)")]
+    public bool enableHeadingHold = false;
+    [Tooltip("Robot-specific option; keep disabled for the legacy robot.")]
+    public bool disableRearCaster = false;
+    public float headingCorrectionGain = 0.05f;
+    private float lockedHeading = 0f;
+    private bool headingLocked = false;
 
     [Header("Drive Tuning")]
     public float wheelDamping = 1000f;
@@ -25,6 +34,11 @@ public class StackerController : MonoBehaviour
     public float liftStiffness = 50000f;
     public float liftDamping = 1000f;
     public float liftForceLimit = 2000f;
+
+    [Header("Articulation Solver")]
+    [Tooltip("Resolve wheel/ground contacts accurately enough for low-speed motion. Validated with a 0.01 s Fixed Timestep.")]
+    [Min(1)] public int solverIterations = 32;
+    [Min(1)] public int solverVelocityIterations = 8;
 
     [Header("ROS Topics")]
     public string cmdVelTopic = "/cmd_vel";
@@ -75,11 +89,40 @@ public class StackerController : MonoBehaviour
             bounceCombine = PhysicMaterialCombine.Minimum
         };
 
-        var frontCaster = transform.Find("base_footprint/base_link/front_caster_link")?.GetComponentInChildren<Collider>();
-        if (frontCaster != null) frontCaster.material = frictionlessMat;
+        // Automatically disable rear caster to prevent 5-point fulcrum / drive wheel unloading
+        var rearCaster = transform.Find("base_footprint/base_link/rear_caster_link")
+                      ?? transform.Find("base_link/rear_caster_link");
+        if (disableRearCaster && rearCaster != null)
+        {
+            rearCaster.gameObject.SetActive(false);
+            Debug.Log("[StackerController] Deactivated rear_caster_link to maintain rock-solid 4-point stability.");
+        }
 
-        var rearCaster = transform.Find("base_footprint/base_link/rear_caster_link")?.GetComponentInChildren<Collider>();
-        if (rearCaster != null) rearCaster.material = frictionlessMat;
+        // Recursively find ALL colliders under any object containing "caster" in its name or parent hierarchy
+        Collider[] allColliders = GetComponentsInChildren<Collider>(true);
+        int casterCount = 0;
+        foreach (var col in allColliders)
+        {
+            Transform t = col.transform;
+            bool isCaster = false;
+            while (t != null && t != transform)
+            {
+                if (t.name.ToLower().Contains("caster"))
+                {
+                    isCaster = true;
+                    break;
+                }
+                t = t.parent;
+            }
+
+            if (isCaster)
+            {
+                col.material = frictionlessMat;
+                casterCount++;
+                Debug.Log($"[StackerController] Caster frictionless material applied to: {col.gameObject.name} (under {t?.name})");
+            }
+        }
+        Debug.Log($"[StackerController] Successfully assigned frictionless material to {casterCount} caster colliders.");
 
         // 2. High-grip material for Drive Wheels (ensures strong traction)
         PhysicMaterial wheelMat = new PhysicMaterial("WheelGrip")
@@ -99,6 +142,14 @@ public class StackerController : MonoBehaviour
 
     public void ConfigureJoints()
     {
+        // The default 6/1 solver stalls small wheel commands under ground contact
+        // in WarehouseTraining. Apply the measured profile to this robot only.
+        foreach (var body in GetComponentsInChildren<ArticulationBody>())
+        {
+            body.solverIterations = Mathf.Max(1, solverIterations);
+            body.solverVelocityIterations = Mathf.Max(1, solverVelocityIterations);
+        }
+
         // Ensure the root ArticulationBody is mobile (not anchored to world)
         var rootAB = GetComponentInChildren<ArticulationBody>();
         if (rootAB != null && rootAB.isRoot)
@@ -186,7 +237,7 @@ public class StackerController : MonoBehaviour
         // Handle keyboard lift
         if (Mathf.Abs(liftInput) > 0.01f)
         {
-            targetLiftPosition = Mathf.Clamp(targetLiftPosition + liftInput * manualLiftSpeed * Time.deltaTime, 0f, maxLiftHeight);
+            targetLiftPosition = Mathf.Clamp(targetLiftPosition + liftInput * manualLiftSpeed * Time.deltaTime, minLiftHeight, maxLiftHeight);
             SetLiftPosition(targetLiftPosition);
         }
     }
@@ -203,13 +254,37 @@ public class StackerController : MonoBehaviour
     // ROS 1 /lift_cmd Callback
     void OnLiftCmdReceived(Float32Msg msg)
     {
-        targetLiftPosition = Mathf.Clamp(msg.data, 0f, maxLiftHeight);
+        targetLiftPosition = Mathf.Clamp(msg.data, minLiftHeight, maxLiftHeight);
         SetLiftPosition(targetLiftPosition);
     }
 
     // Differential Drive Kinematics: (linear, angular) -> (wheel angular speeds)
     public void SetWheelVelocities(float linearX, float angularZ)
     {
+        // Straight-line drift correction (Heading Lock)
+        if (enableHeadingHold)
+        {
+            if (Mathf.Abs(angularZ) < 0.005f && Mathf.Abs(linearX) > 0.02f)
+            {
+                if (!headingLocked)
+                {
+                    lockedHeading = transform.eulerAngles.y;
+                    headingLocked = true;
+                }
+                else
+                {
+                    float currentHeading = transform.eulerAngles.y;
+                    float headingError = Mathf.DeltaAngle(currentHeading, lockedHeading);
+                    // Apply corrective steering trim (direction depends on forward vs reverse)
+                    angularZ += headingError * headingCorrectionGain * Mathf.Sign(linearX);
+                }
+            }
+            else
+            {
+                headingLocked = false;
+            }
+        }
+
         float leftLinearSpeed = linearX - (angularZ * trackWidth / 2.0f);
         float rightLinearSpeed = linearX + (angularZ * trackWidth / 2.0f);
 
