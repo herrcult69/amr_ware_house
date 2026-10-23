@@ -15,7 +15,7 @@ GameObject:
   - component: {fileID: 4345438654229245576}
   - component: {fileID: 1436264500842558450}
   m_Layer: 0
-  m_Name: DynamicObstacle
+  m_Name: DynamicObstacle(draft)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
