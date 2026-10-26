@@ -1273,8 +1273,8 @@ Transform:
   m_GameObject: {fileID: 1461486451513151148}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0.45, z: 0}
-  m_LocalScale: {x: 0.32, y: 0.9, z: 0.06}
+  m_LocalPosition: {x: 0, y: 0.625, z: 0}
+  m_LocalScale: {x: 0.32, y: 1.25, z: 0.06}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 3175577238697933397}
@@ -1861,7 +1861,7 @@ ArticulationBody:
   m_Twist: 2
   m_XDrive:
     lowerLimit: -0.02
-    upperLimit: 0.8
+    upperLimit: 1.15
     stiffness: 0
     damping: 0
     forceLimit: 1500
@@ -5468,8 +5468,8 @@ Transform:
   m_GameObject: {fileID: 7476354844505746952}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0.45, z: 0}
-  m_LocalScale: {x: 0.32, y: 0.9, z: 0.06}
+  m_LocalPosition: {x: 0, y: 0.625, z: 0}
+  m_LocalScale: {x: 0.32, y: 1.25, z: 0.06}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 5419410570499111416}
@@ -5790,7 +5790,7 @@ MonoBehaviour:
   wheelRadius: 0.075
   trackWidth: 0.4
   minLiftHeight: -0.02
-  maxLiftHeight: 0.8
+  maxLiftHeight: 1.15
   enableHeadingHold: 0
   disableRearCaster: 0
   headingCorrectionGain: 0.05
@@ -6102,7 +6102,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8387e18186859ff43b5ce73561697c1d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  rayCount: 187
+  rayCount: 361
   fieldOfView: 180
   rangeMin: 0.05
   rangeMax: 10

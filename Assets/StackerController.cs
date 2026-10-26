@@ -18,7 +18,7 @@ public class StackerController : MonoBehaviour
     public float wheelRadius = 0.075f; // meters
     public float trackWidth = 0.40f;   // meters (distance between wheels for XStackDesign)
     public float minLiftHeight = 0f; // meters (allows lowering for ground picks)
-    public float maxLiftHeight = 0.80f; // meters (tuned mast limit)
+    public float maxLiftHeight = 1.15f; // meters (reaches tier-4 pallets, pick stroke 1.025 m)
 
     [Header("Straight-Line Heading Lock (Anti-Drift)")]
     public bool enableHeadingHold = false;
