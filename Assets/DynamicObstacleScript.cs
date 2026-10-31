@@ -6,6 +6,7 @@ public class DynamicObstacleMover : MonoBehaviour
     public float speed = 0.25f;
     public float distance = 4.0f;
     public bool moveHorizontally = true; // True for X-axis, False for Z-axis
+    public bool reversePath = false; // Flips the direction of travel along the path
 
     private Vector3 startPosition;
 
@@ -18,6 +19,7 @@ public class DynamicObstacleMover : MonoBehaviour
     {
         // Calculate offset using a Sine wave for smooth back-and-forth motion
         float offset = Mathf.Sin(Time.time * speed) * distance;
+        if (reversePath) offset = -offset;
 
         if (moveHorizontally)
         {

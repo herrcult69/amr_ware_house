@@ -6103,7 +6103,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   rayCount: 361
-  fieldOfView: 180
+  fieldOfView: 220
   rangeMin: 0.05
   rangeMax: 10
   publishHz: 10
