@@ -5820,7 +5820,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   robotBase: {fileID: 2933889011735616003}
   childFrameId: drive_center
-  publishHz: 20
+  publishHz: 50
+  clockHz: 100
 --- !u!1 &8410095292130829313
 GameObject:
   m_ObjectHideFlags: 0
