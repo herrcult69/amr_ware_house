@@ -20,8 +20,12 @@ public class PlanarOdometryPublisher : MonoBehaviour
     public Transform robotBase;
     public string childFrameId = "base_footprint";
     private static PlanarOdometryPublisher clockOwner;
-    [Min(1f)] public float publishHz = 20f;
+    [Tooltip("/odom and /tf rate.")]
+    [Min(1f)] public float publishHz = 50f;
+    [Tooltip("/clock rate, independent of publishHz. Every ROS sim-time timer ticks on this clock, so it should be the fastest topic. Capped at the physics rate (1 / Fixed Timestep).")]
+    [Min(1f)] public float clockHz = 100f;
 
+    private double previousClockTime = double.NegativeInfinity;
     private ROSConnection ros;
     private Vector3 origin;
     private Quaternion originYaw;
@@ -70,9 +74,12 @@ public class PlanarOdometryPublisher : MonoBehaviour
         ros.RegisterPublisher<ClockMsg>("/clock");
     }
 
-    void LateUpdate()
+    // FixedUpdate so /clock, /odom and /tf share one time source (fixed sim time) that ticks at the physics rate
+    // regardless of the render frame rate. The half-step slack keeps floating-point error from skipping a tick.
+    void FixedUpdate()
     {
-        double now = Time.timeAsDouble;
+        double now = Time.fixedTimeAsDouble;
+        double halfStep = 0.5 * Time.fixedDeltaTime;
         // Capture the actual moving link, not the stationary prefab wrapper.
         if (!initialized)
         {
@@ -85,8 +92,16 @@ public class PlanarOdometryPublisher : MonoBehaviour
             return;
         }
 
+        // Clock first, on its own timer, so the clock is never behind the odom/tf stamped at the same tick.
+        if (now - previousClockTime >= 1.0 / Math.Max(1f, clockHz) - halfStep)
+        {
+            uint clockSec = (uint)Math.Floor(now);
+            ros.Publish("/clock", new ClockMsg(new TimeMsg(clockSec, (uint)((now - clockSec) * 1000000000.0))));
+            previousClockTime = now;
+        }
+
         double dt = now - previousTime;
-        if (dt < 1.0 / Math.Max(1f, publishHz)) return;
+        if (dt < 1.0 / Math.Max(1f, publishHz) - halfStep) return;
 
         Vector3 position = robotBase.position;
         float yaw = robotBase.eulerAngles.y;
@@ -119,7 +134,6 @@ public class PlanarOdometryPublisher : MonoBehaviour
         transformMessage.transform.translation = new Vector3Msg(relative.z, -relative.x, 0);
         transformMessage.transform.rotation = rotation;
 
-        ros.Publish("/clock", new ClockMsg(stamp));
         ros.Publish("/odom", odom);
         ros.Publish("/tf", new TFMessageMsg(new[] { transformMessage }));
         previousPosition = position;
